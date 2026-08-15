@@ -43,6 +43,17 @@ export default {
           400
         );
       }
+      const BLOCKED_NUMBERS = [
+  "8617874969",
+  "8101114332"
+];
+
+if (BLOCKED_NUMBERS.includes(num)) {
+  return jsonResponse(
+    { error: "This number is not available for lookup." },
+    403
+  );
+}
 
       const upstream = new URL("https://markplace.site/api.php");
 
