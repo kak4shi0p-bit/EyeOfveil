@@ -1,10 +1,9 @@
 {
-  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "eyeofveil",
   "main": "./_worker.js",
   "compatibility_date": "2026-08-15",
   "assets": {
-    "directory": ".",
-    "binding": "ASSETS"
+    "directory": "."
   }
 }
