@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OSINT Lookup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #080808; --surface: #111111; --surface2: #1a1a1a; --surface3: #222222;
+    --border: rgba(255,255,255,0.06); --text: #f0f0f0; --muted: #666;
+    --accent: #dc1e1e; --accent-bright: #ff3333; --accent-dim: rgba(220,30,30,0.1);
+    --accent2: #ff6b6b; --danger: #ff4444; --radius: 12px; --radius-sm: 8px;
+    --glow: 0 0 20px rgba(220,30,30,0.15); --glow-strong: 0 0 40px rgba(220,30,30,0.25);
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; padding: 2rem 1rem 5rem; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(220,30,30,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(220,30,30,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; animation: gridPulse 8s ease-in-out infinite; }
+  @keyframes gridPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+  .container { max-width: 640px; margin: 0 auto; position: relative; z-index: 1; }
+  header { text-align: center; margin-bottom: 2.5rem; animation: fadeDown 0.6s ease; }
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .logo-icon { width:40px;height:40px; background:var(--accent-dim); border:1px solid var(--accent); border-radius:10px; display:flex;align-items:center;justify-content:center; font-size:20px; box-shadow:var(--glow); animation:pulse 3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 10px rgba(220,30,30,0.2)} 50%{box-shadow:0 0 25px rgba(220,30,30,0.5)} }
+  header h1 { font-size:30px;font-weight:600;letter-spacing:-.5px; background:linear-gradient(135deg,#fff 30%,var(--accent-bright)); -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+  header p { font-size:13px;color:var(--muted);margin-top:6px;letter-spacing:.3px; }
+  .notice { background:rgba(220,30,30,0.07);border:0.5px solid rgba(220,30,30,0.25);border-radius:var(--radius-sm);padding:.7rem 1rem;font-size:12px;color:#ff8080;display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;animation:fadeUp .6s ease .1s both; }
+  .notice-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:blink 1.5s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+  .section-label { font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:1rem 0 .5rem;display:flex;align-items:center;gap:8px;animation:fadeUp .6s ease .15s both; }
+  .section-label::after { content:'';flex:1;height:.5px;background:var(--border); }
+  .tools-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;animation:fadeUp .6s ease .2s both; }
+  .tool-btn { background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem .5rem;cursor:pointer;text-align:center;transition:all .2s ease;color:var(--text);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:76px; }
+  .tool-btn::before { content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(220,30,30,0.15),transparent 70%);opacity:0;transition:opacity .3s; }
+  .tool-btn:hover{border-color:rgba(220,30,30,0.4);transform:translateY(-2px);box-shadow:var(--glow)}
+  .tool-btn:hover::before{opacity:1}
+  .tool-btn.active{border-color:var(--accent);background:var(--accent-dim);box-shadow:var(--glow-strong)}
+  .tool-btn.active::before{opacity:1}
+  .tool-btn .icon{font-size:22px;margin-bottom:6px;display:block;text-align:center;line-height:1}
+  .tool-btn .label{font-size:11px;color:var(--muted);line-height:1.3;transition:color .2s;display:block;text-align:center}
+  .tool-btn:hover .label{color:var(--accent2)}
+  .tool-btn.active .label{color:var(--accent-bright)}
+  .panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.5rem;display:none;animation:slideIn .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 4px 30px rgba(0,0,0,.4);margin-top:.5rem}
+  .panel.visible{display:block}
+  @keyframes slideIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .panel h2{font-size:16px;font-weight:500;margin-bottom:4px}
+  .panel .hint{font-size:13px;color:var(--muted);margin-bottom:1.25rem}
+  .input-row{display:flex;gap:8px}
+  .input-row input{flex:1;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:.7rem .9rem;font-size:14px;color:var(--text);outline:none;transition:all .2s;font-family:'JetBrains Mono',monospace}
+  .input-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(220,30,30,0.1);background:var(--surface3)}
+  .input-row input::placeholder{color:var(--muted);font-family:'Inter',sans-serif}
+  .search-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:0 1.25rem;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;font-family:inherit;position:relative;overflow:hidden}
+  .search-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,.1) 50%,transparent 70%);transform:translateX(-100%);transition:transform .4s}
+  .search-btn:hover{background:var(--accent-bright);box-shadow:0 0 20px rgba(220,30,30,.4)}
+  .search-btn:hover::after{transform:translateX(100%)}
+  .search-btn:active{transform:scale(.97)}
+  .result{margin-top:1.25rem;background:var(--surface2);border-radius:var(--radius-sm);padding:1.25rem;font-size:13px;line-height:1.8;color:var(--text);display:none;white-space:pre-wrap;word-break:break-word;border:0.5px solid var(--border);font-family:'JetBrains Mono',monospace;position:relative;overflow:hidden}
+  .result.visible{display:block;animation:resultIn .4s ease}
+  @keyframes resultIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .result.error{color:var(--danger);border-color:rgba(255,68,68,.2)}
+  .result.loading{color:var(--muted);font-style:italic}
+  .result.loading::after{content:'';position:absolute;top:0;left:-100%;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 1.2s ease-in-out infinite}
+  @keyframes scan{0%{left:-100%}100%{left:100%}}
+  .loading-text::after{content:'|';animation:cur .8s step-end infinite}
+  @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+  .action-bar{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+  .quick-btn{background:rgba(220,30,30,0.08);border:0.5px solid rgba(220,30,30,.35);color:var(--accent2);border-radius:var(--radius-sm);padding:.5rem 1rem;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit}
+  .quick-btn:hover{background:rgba(220,30,30,.15);border-color:var(--accent);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,30,30,.2)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  footer{text-align:center;margin-top:3rem;font-size:11px;color:#333;letter-spacing:.5px;text-transform:uppercase;animation:fadeUp .6s ease .4s both}
+  ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:var(--bg)} ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔍</div>
+      <h1>OSINT Lookup</h1>
+    </div>
+    <p>Advanced Intelligence Lookup — Mobile · Aadhaar · Vehicle · Social · Bank</p>
+  </header>
+
+  <div class="notice">
+    <span class="notice-dot"></span>
+    For educational and authorised research purposes only. All lookups are logged.
+  </div>
+
+  <div class="section-label">Identity</div>
+  <div class="tools-grid">
+    <button class="tool-btn" onclick="selectTool('number')" id="btn-number"><span class="icon">📱</span><span class="label">Number Lookup</span></button>
+    <button class="tool-btn" onclick="selectTool('aadhaar')" id="btn-aadhaar"><span class="icon">🪪</span><span class="label">Aadhaar Lookup</span></button>
+    <button class="tool-btn" onclick="selectTool('family')" id="btn-family"><span class="icon">👨‍👩‍👧</span><span class="label">Family Lookup</span></button>
+    <button class="tool-btn" onclick="selectTool('vehicle')" id="btn-vehicle"><span class="icon">🚗</span><span class="label">Vehicle Lookup</span></button>
+  </div>
+
+  <div class="section-label">Finance</div>
+  <div class="tools-grid">
+    <button class="tool-btn" onclick="selectTool('ifsc')" id="btn-ifsc"><span class="icon">🏦</span><span class="label">IFSC Lookup</span></button>
+    <button class="tool-btn" onclick="selectTool('pincode')" id="btn-pincode"><span class="icon">📮</span><span class="label">Pincode Lookup</span></button>
+  </div>
+
+  <div class="section-label">Social</div>
+  <div class="tools-grid">
+    <button class="tool-btn" onclick="selectTool('instagram')" id="btn-instagram"><span class="icon">📸</span><span class="label">Instagram Lookup</span></button>
+    <button class="tool-btn" onclick="selectTool('telegram')" id="btn-telegram"><span class="icon">✈️</span><span class="label">Telegram Lookup</span></button>
+  </div>
+
+  <div class="panel" id="panel">
+    <h2 id="panelTitle"></h2>
+    <p class="hint" id="panelHint"></p>
+    <div class="input-row">
+      <input type="text" id="queryInput" placeholder="" onkeydown="if(event.key==='Enter') doSearch()" />
+      <button class="search-btn" onclick="doSearch()">Search</button>
+    </div>
+    <div class="result" id="result"></div>
+    <div class="action-bar">
+      <button class="quick-btn" onclick="copyResult()">📋 Copy Result</button>
+      <button class="quick-btn" onclick="downloadResult()">⬇ Download TXT</button>
+      <button class="quick-btn" onclick="clearResult()">✕ Clear</button>
+    </div>
+  </div>
+</div>
+
+<footer>Need API Access? Contact @Blued_5d</footer>
+
+<script>
+const API = {
+  number:    'https://markplace.site/api.php?key=nillxnum_015c08a920fbccfe&type=number&num={term}',
+  aadhaar:   'https://markplace.site/api.php?key=nillxaadha_30a1200a4063d358&type=aadhaar&aadhaar={term}',
+  family:    'https://exploitsindia.site/osint/api.php?key=niluvs&type=family&num={term}',
+  pincode:   'https://exploitsindia.site/osint/api.php?key=niluvs&type=pincode&num={term}',
+  ifsc:      'https://exploitsindia.site/osint/api.php?key=niluvs&type=ifsc&num={term}',
+  instagram: 'https://exploitsindia.site/osint/api.php?key=niluvs&type=instagram&num={term}',
+  telegram:  'https://exploitsindia.site/osint/api.php?key=niluvs&type=telegram&num={term}',
+  vehicle:   'https://exploitsindia.site/osint/api.php?key=niluvs&type=vehicle&num={term}',
+};
+
+const tools = {
+  number:    { title:'Number Lookup',    hint:'Enter a 10-digit mobile number',         placeholder:'9876543210',    pattern:/^\d{10}$/,                                   err:'Enter a valid 10-digit number.',                  transform:v=>v },
+  aadhaar:   { title:'Aadhaar Lookup',   hint:'Enter a 12-digit Aadhaar number',        placeholder:'123456789012',  pattern:/^\d{12}$/,                                   err:'Enter a valid 12-digit Aadhaar number.',          transform:v=>v },
+  family:    { title:'Family Lookup',    hint:'Enter a 12-digit Aadhaar number',        placeholder:'123456789012',  pattern:/^\d{12}$/,                                   err:'Enter a valid 12-digit Aadhaar number.',          transform:v=>v },
+  pincode:   { title:'Pincode Lookup',   hint:'Enter a 6-digit PIN code',               placeholder:'110001',        pattern:/^\d{6}$/,                                    err:'Enter a valid 6-digit PIN code.',                 transform:v=>v },
+  ifsc:      { title:'IFSC Lookup',      hint:'Enter a bank IFSC code',                 placeholder:'SBIN0001234',   pattern:/^[A-Z]{4}0[A-Z0-9]{6}$/,                    err:'Invalid IFSC. Format: 4 letters + 0 + 6 chars.',  transform:v=>v.toUpperCase() },
+  instagram: { title:'Instagram Lookup', hint:'Enter an Instagram username',            placeholder:'username',      pattern:/^[a-zA-Z0-9_.]{1,30}$/,                     err:'Invalid username.',                               transform:v=>v },
+  telegram:  { title:'Telegram Lookup',  hint:'Enter a Telegram @username or user ID',  placeholder:'@username',     pattern:/^(@?[a-zA-Z0-9_]{5,32}|\d+)$/,              err:'Invalid Telegram ID or username.',                transform:v=>v },
+  vehicle:   { title:'Vehicle Lookup',   hint:'Enter vehicle registration number',      placeholder:'MH12AB1234',    pattern:/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{4}$/,   err:'Invalid registration. Example: MH12AB1234.',     transform:v=>v.toUpperCase() },
+};
+
+let current = null;
+let loadingInterval = null;
+const frames = ['Scanning databases','Scanning databases.','Scanning databases..','Scanning databases...'];
+
+function selectTool(key, prefill) {
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+key).classList.add('active');
+  current = key;
+  const t = tools[key];
+  document.getElementById('panelTitle').textContent = t.title;
+  document.getElementById('panelHint').textContent  = t.hint;
+  const inp = document.getElementById('queryInput');
+  inp.placeholder = t.placeholder;
+  inp.value = prefill || '';
+  const r = document.getElementById('result');
+  r.className = 'result'; r.textContent = '';
+  const panel = document.getElementById('panel');
+  panel.classList.remove('visible');
+  void panel.offsetWidth;
+  panel.classList.add('visible');
+  inp.focus();
+  if (prefill) doSearch();
+}
+
+async function doSearch() {
+  if (!current) return;
+  const t = tools[current];
+  const inp = document.getElementById('queryInput');
+  const r   = document.getElementById('result');
+  const val = t.transform(inp.value.trim());
+
+  if (!t.pattern.test(val)) {
+    r.className = 'result error visible';
+    r.textContent = '⚠ ' + t.err;
+    return;
+  }
+
+  clearInterval(loadingInterval);
+  r.className = 'result loading visible';
+  let frame = 0;
+  r.innerHTML = '<span class="loading-text">'+frames[0]+'</span>';
+  loadingInterval = setInterval(() => {
+    frame = (frame+1) % frames.length;
+    r.innerHTML = '<span class="loading-text">'+frames[frame]+'</span>';
+  }, 400);
+
+  const url = API[current].replace('{term}', encodeURIComponent(val));
+
+  try {
+    const res = await fetch(url);
+    clearInterval(loadingInterval);
+    if (!res.ok) {
+      r.className = 'result error visible';
+      r.textContent = '⚠ API error '+res.status+'. Try again or contact @Blued_5d.';
+      return;
+    }
+    const text = await res.text();
+    const display = parseResponse(text);
+    r.className = 'result visible';
+    r.textContent = display || 'No data found.';
+    if (display && display !== 'No data found.') saveHistory(val);
+  } catch(e) {
+    clearInterval(loadingInterval);
+    r.className = 'result error visible';
+    r.textContent = '⚠ Request failed — possible CORS block or network error.\nContact @Blued_5d for support.';
+  }
+}
+
+function parseResponse(text) {
+  try {
+    const p = JSON.parse(text);
+    if (p.result && Array.isArray(p.result) && p.result.length > 0) {
+      return p.result.map((item, i) => {
+        const lines = Object.entries(item)
+          .filter(([,v]) => v !== null && v !== 'null' && v !== '')
+          .map(([k,v]) => cap(k)+': '+v).join('\n');
+        return (i > 0 ? '─'.repeat(30)+'\n' : '') + lines;
+      }).join('\n');
+    }
+    if (p.data && typeof p.data === 'object') {
+      return Object.entries(p.data)
+        .filter(([,v]) => v !== null && v !== 'null' && v !== '')
+        .map(([k,v]) => cap(k)+': '+v).join('\n');
+    }
+    if (p.message) return p.message;
+    if (p.status && p.status !== 'success') return p.status;
+    return JSON.stringify(p, null, 2);
+  } catch(_) {
+    return text.replace(/\n{3,}/g,'\n\n').trim();
+  }
+}
+
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1).replace(/_/g,' '); }
+
+function saveHistory(q){
+  try {
+    let h = JSON.parse(localStorage.getItem('lookupHistory')||'[]');
+    h = [q,...h.filter(x=>x!==q)].slice(0,10);
+    localStorage.setItem('lookupHistory', JSON.stringify(h));
+  } catch(_){}
+}
+
+function copyResult(){
+  const text = document.getElementById('result').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(()=>showToast('Copied!')).catch(()=>alert(text));
+}
+
+function downloadResult(){
+  const text = document.getElementById('result').textContent;
+  if (!text) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text],{type:'text/plain'}));
+  a.download = (current||'lookup')+'-result.txt';
+  a.click();
+}
+
+function clearResult(){
+  const r = document.getElementById('result');
+  r.className='result'; r.textContent='';
+  document.getElementById('queryInput').value='';
+  document.getElementById('queryInput').focus();
+}
+
+function showToast(msg){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style,{position:'fixed',bottom:'2rem',left:'50%',transform:'translateX(-50%)',
+    background:'#222',color:'var(--accent2)',border:'0.5px solid var(--accent)',
+    borderRadius:'8px',padding:'.5rem 1.25rem',fontSize:'13px',zIndex:'999',
+    boxShadow:'var(--glow)'});
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 1800);
+}
+
+window.addEventListener('load', () => selectTool('number'));
+</script>
+</body>
+</html>
